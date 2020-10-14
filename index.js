@@ -115,14 +115,8 @@ client.connect(err => {
     const file = req.files.file;
     const title = req.body.title;
     const description = req.body.description;
-    const filePath = `${__dirname}/serviceIcon/${file.name}`;
-    
-    file.mv(filePath, err => {
-      if(err) {
-        console.log(err);
-        return res.status(500).send({msg: "failed to update service icon"});
-      }
-      const newImg = fs.readFileSync(filePath);
+
+      const newImg = file.data;
       const encImg = newImg.toString('base64');
 
         var image = {
@@ -133,13 +127,8 @@ client.connect(err => {
 
       service.insertOne({title, description, image })
       .then(result =>{
-        fs.remove(filePath, error => {
-          if(error) {console.log(error)}
           res.send(result.insertedCount > 0)
-        })
       })
-      // return res.send({name: file.name, path: `/${file.name}`})
-    })
   })
 
   app.get("/newService", (req, res) =>{
