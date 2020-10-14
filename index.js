@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const fs = require("fs-extra");
 const fileUpload = require("express-fileUpload");
 const MongoClient = require("mongodb").MongoClient;
 // const ObjectId = require("mongodb").ObjectId;
@@ -10,7 +11,7 @@ require("dotenv").config();
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
-app.use(express.static('icons'));
+app.use(express.static('serviceIcon'));
 app.use(fileUpload());
 const port = 5000;
 
@@ -59,7 +60,6 @@ client.connect(err => {
       admin.auth().verifyIdToken(idToken)
         .then(function(decodedToken) {
           let tokenEmail = decodedToken.email;
-          console.log(tokenEmail, req.query.email);
           if(tokenEmail === req.query.email){
             userCollection.find({email: req.query.email})
             .toArray((err, documents) => {
@@ -87,21 +87,6 @@ client.connect(err => {
       res.send(documents);
     })
   })
-
-  app.post('/addNewService', (req, res) =>{
-    const newService = req.body;
-    service.insertOne(newService)
-      .then(result => {
-          res.send(result.insertedCount > 0);
-    })
-  })
-  app.get("/newService", (req, res) =>{
-    service.find({})
-    .toArray( (err, documents) => {
-      res.send(documents);
-    })
-  })
-
   
   app.get("/allProject", (req, res) =>{
     userCollection.find({})
@@ -117,6 +102,53 @@ client.connect(err => {
       res.send(result.insertedCount > 0);
     })
   })
+
+  app.post('/isAdmin', (req, res) => {
+    const email = req.body.email;
+    adminCollection.find({ email: email})
+      .toArray((err, documents) => {
+        res.send(documents.length > 0 )
+      })
+  })
+
+  app.post('/addNewService', (req, res) => {
+    const file = req.files.file;
+    const title = req.body.title;
+    const description = req.body.description;
+    const filePath = `${__dirname}/serviceIcon/${file.name}`;
+    
+    file.mv(filePath, err => {
+      if(err) {
+        console.log(err);
+        return res.status(500).send({msg: "failed to update service icon"});
+      }
+      const newImg = fs.readFileSync(filePath);
+      const encImg = newImg.toString('base64');
+
+        var image = {
+            contentType: file.mimetype,
+            size: file.size,
+            img: Buffer.from(encImg, 'base64')
+        };
+
+      service.insertOne({title, description, image })
+      .then(result =>{
+        fs.remove(filePath, error => {
+          if(error) {console.log(error)}
+          res.send(result.insertedCount > 0)
+        })
+      })
+      // return res.send({name: file.name, path: `/${file.name}`})
+    })
+  })
+
+  app.get("/newService", (req, res) =>{
+    service.find({})
+    .toArray( (err, documents) => {
+      res.send(documents);
+    })
+  })
+
 
 });
 
