@@ -45,11 +45,27 @@ client.connect(err => {
   const adminCollection = client.db("creative-agency").collection("admin");
 
   app.post("/addProject", (req, res) => {
-    const newProject = req.body;
-    userCollection.insertOne(newProject)
-    .then(result => {
-      res.send(result.insertedCount > 0);
-    })
+    const file = req.files.file;
+    const title = req.body.title;
+    const projectDtl = req.body.projectDtl;
+    const name = req.body.name;
+    const email = req.body.email;
+    
+    console.log(file.data);
+
+      const newUploadImg = file.data;
+      const encImage = newUploadImg.toString('base64');
+
+        var newImage = {
+            contentType: file.mimetype,
+            size: file.size,
+            img: Buffer.from(encImage, 'base64')
+        };
+
+        userCollection.insertOne({title, projectDtl, name, email, newImage })
+      .then(result =>{
+          res.send(result.insertedCount > 0)
+      })
   })
 
   app.get("/project", (req, res) => {
